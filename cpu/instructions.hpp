@@ -28,6 +28,9 @@ namespace CPU {
         uint16_t fetchWord();
         void decodeAndExecute(uint8_t opcode);
         uint16_t* getRegisterReference(uint8_t reg);
+        void setArithmeticFlags(uint16_t result, uint16_t dest, uint16_t src); //Set flags for arithmetic operations
+        void setArithmeticFlags(uint16_t dest, uint16_t src); //Set flags for logical operations
+        void handleF6(); //Multiple instructions share the same opcode
         void handleMOV();
         void handleADD();
         void handleSUB();

@@ -10,4 +10,6 @@ add_executable(emu8086 main.cpp
         cpu/instructions.hpp
         cpu/memory.hpp
         cpu/memory.cpp
-        cpu/instructions.cpp)
+        cpu/instructions.cpp
+        utils/utils.cpp
+        utils/utils.h)

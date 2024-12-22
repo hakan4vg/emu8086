@@ -6,8 +6,11 @@
 #include "flags.hpp"
 #include "instructions.hpp"
 #include <iostream>
+#include "../utils/utils.h"
+
 
 namespace CPU {
+    cpu::UTILS utils;
     Instructions::Instructions(Memory &mem, Registers &reg, Flags &flg)
             : memory(mem), registers(reg), flags(flg) {
         //Initialize opcode table
@@ -22,11 +25,11 @@ namespace CPU {
         opcodeTable[0x29] = std::bind(&Instructions::handleSUB, this);
         opcodeTable[0x2B] = std::bind(&Instructions::handleSUB, this);
 
-        opcodeTable[0xF6] = std::bind(&Instructions::handleMUL, this);
-        opcodeTable[0xF7] = std::bind(&Instructions::handleMUL, this);
+        opcodeTable[0xF6] = std::bind(&Instructions::handleF6, this); //MUL
+        opcodeTable[0xF7] = std::bind(&Instructions::handleF6, this); //MUL
 
-        opcodeTable[0xF6] = std::bind(&Instructions::handleDIV, this);
-        opcodeTable[0xF7] = std::bind(&Instructions::handleDIV, this);
+        opcodeTable[0xF6] = std::bind(&Instructions::handleF6, this);  //DIV
+        opcodeTable[0xF7] = std::bind(&Instructions::handleF6, this);  //DIV
 
         opcodeTable[0x40] = std::bind(&Instructions::handleINC, this);  // INC for AX
         opcodeTable[0x41] = std::bind(&Instructions::handleINC, this);  // INC for CX
@@ -69,8 +72,8 @@ namespace CPU {
         opcodeTable[0x30] = std::bind(&Instructions::handleXOR, this);
         opcodeTable[0x31] = std::bind(&Instructions::handleXOR, this);
 
-        opcodeTable[0xF6] = std::bind(&Instructions::handleNOT, this);
-        opcodeTable[0xF7] = std::bind(&Instructions::handleNOT, this);
+        opcodeTable[0xF6] = std::bind(&Instructions::handleF6, this); //NOT
+        opcodeTable[0xF7] = std::bind(&Instructions::handleF6, this); //NOT
 
         opcodeTable[0xD0] = std::bind(&Instructions::handleSHL, this);  // SHL by 1
         opcodeTable[0xD1] = std::bind(&Instructions::handleSHL, this);  // SHL by 1 (for 16-bit registers)
@@ -95,6 +98,37 @@ namespace CPU {
             opcodeTable[opcode](); //execute the instruction
         } else {
             throw std::runtime_error("Unknown opcode: " + std::to_string(opcode));
+        }
+    }
+
+     /**
+     * Handles arithmetic ADD instruction
+     * Performs dest = dest + src and sets appropriate flags:
+     * - ZF: Set if result is zero
+     * - CF: Set if unsigned overflow occurred
+     * - OF: Set if signed overflow occurred
+     * - SF: Set if result is negative
+     * - AF: Set if auxiliary carry occurred
+     */
+    void Instructions::setArithmeticFlags(uint16_t result, uint16_t dest, uint16_t src) {
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::CF, result < dest);
+        flags.setFlag(FLAGS::OF, ((dest ^ src ^ 0x8000) & (dest ^ result) & 0x8000) != 0);
+        flags.setFlag(FLAGS::AF, ((dest ^ src ^ result) & 0x10) != 0);
+        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+    }
+
+    void Instructions::handleF6()
+    {
+        uint8_t modrm = fetchByte();
+        uint8_t subOpcode = (modrm >> 3) & 0x07;
+
+        switch (subOpcode)
+        {
+        case 0x04: handleMUL(); break;
+        case 0x06: handleDIV(); break;
+        case 0x02: handleNOT(); break;
+        default: throw std::runtime_error("Unknown F6 opcode: " + std::to_string(subOpcode));
         }
     }
     void Instructions::executeNext() {
@@ -128,11 +162,14 @@ namespace CPU {
 
         uint32_t result = *dest + src;
 
-        flags.setFlag(FLAGS::ZF, result == 0);
-        flags.setFlag(FLAGS::CF, result < *dest);
-        flags.setFlag(FLAGS::OF, ((*dest ^ src ^ 0x8000) & (*dest ^ result) & 0x8000) != 0);
-        flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
-        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+        setArithmeticFlags(result, *dest, src);
+
+        // setArithmeticFlags(result, *dest, src);
+        // flags.setFlag(FLAGS::ZF, result == 0);
+        // flags.setFlag(FLAGS::CF, result < *dest);
+        // flags.setFlag(FLAGS::OF, ((*dest ^ src ^ 0x8000) & (*dest ^ result) & 0x8000) != 0);
+        // flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
+        // flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
 
         *dest = result;
     }
@@ -148,11 +185,13 @@ namespace CPU {
 
         uint16_t result = *dest - src;
 
-        flags.setFlag(FLAGS::ZF, result == 0);
-        flags.setFlag(FLAGS::CF, *dest < src);
-        flags.setFlag(FLAGS::OF, ((*dest ^ src) & (*dest ^ result) & 0x8000) != 0);
-        flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
-        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+        setArithmeticFlags(result, *dest, src);
+
+        // flags.setFlag(FLAGS::ZF, result == 0);
+        // flags.setFlag(FLAGS::CF, *dest < src);
+        // flags.setFlag(FLAGS::OF, ((*dest ^ src) & (*dest ^ result) & 0x8000) != 0);
+        // flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
+        // flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
 
         *dest = result;
     }
@@ -169,9 +208,11 @@ namespace CPU {
 
         uint32_t result = *dest * src;
 
-        flags.setFlag(FLAGS::ZF, result == 0);
-        flags.setFlag(FLAGS::CF, result > 0xFFFF);
-        flags.setFlag(FLAGS::OF, result > 0xFFFF);
+        setArithmeticFlags(result, *dest ,src);
+
+        // flags.setFlag(FLAGS::ZF, result == 0);
+        // flags.setFlag(FLAGS::CF, result > 0xFFFF);
+        // flags.setFlag(FLAGS::OF, result > 0xFFFF);
 
         *dest = result;
     }
@@ -191,9 +232,11 @@ namespace CPU {
 
         uint32_t result = *dest / src;
 
-        flags.setFlag(FLAGS::ZF, result == 0);
-        flags.setFlag(FLAGS::CF, result > 0xFFFF);
-        flags.setFlag(FLAGS::OF, result > 0xFFFF);
+        setArithmeticFlags(result, *dest ,src);
+
+        // flags.setFlag(FLAGS::ZF, result == 0);
+        // flags.setFlag(FLAGS::CF, result > 0xFFFF);
+        // flags.setFlag(FLAGS::OF, result > 0xFFFF);
 
         *dest = result;
     }
@@ -237,11 +280,13 @@ namespace CPU {
 
         uint16_t result = *dest - src;
 
-        flags.setFlag(FLAGS::ZF, result == 0);
-        flags.setFlag(FLAGS::CF, *dest < src);
-        flags.setFlag(FLAGS::OF, ((*dest ^ src) & (*dest ^ result) & 0x8000) != 0);
-        flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
-        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+        setArithmeticFlags(result, *dest ,src);
+
+        // flags.setFlag(FLAGS::ZF, result == 0);
+        // flags.setFlag(FLAGS::CF, *dest < src);
+        // flags.setFlag(FLAGS::OF, ((*dest ^ src) & (*dest ^ result) & 0x8000) != 0);
+        // flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
+        // flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
     }
 
     void Instructions::handleINT() //Interrupt
@@ -264,9 +309,11 @@ namespace CPU {
 
         *dest &= src;
 
+       // setArithmeticFlags(result, *dest ,src);
+
         flags.setFlag(FLAGS::ZF, *dest == 0);
         flags.setFlag(FLAGS::SF, (*dest & 0x8000) != 0);
-        flags.setFlag(FLAGS::PF, __builtin_parity(*dest));
+        flags.setFlag(FLAGS::PF, utils.calculateParity(*dest));
         flags.setFlag(FLAGS::CF, false); // AND does not affect carry flag
         flags.setFlag(FLAGS::OF, false); // AND does not affect overflow flag
     }
@@ -282,9 +329,10 @@ namespace CPU {
 
         *dest |= src;
 
+
         flags.setFlag(FLAGS::ZF, *dest == 0);
         flags.setFlag(FLAGS::SF, (*dest & 0x8000) != 0);
-        flags.setFlag(FLAGS::PF, __builtin_parity(*dest));
+        flags.setFlag(FLAGS::PF, utils.calculateParity(*dest));
         flags.setFlag(FLAGS::CF, false); // OR does not affect carry flag
         flags.setFlag(FLAGS::OF, false); // OR does not affect overflow flag
     }
@@ -300,9 +348,10 @@ namespace CPU {
 
         *dest ^= src;
 
+
         flags.setFlag(FLAGS::ZF, *dest == 0);
         flags.setFlag(FLAGS::SF, (*dest & 0x8000) != 0);
-        flags.setFlag(FLAGS::PF, __builtin_parity(*dest));
+        flags.setFlag(FLAGS::PF, utils.calculateParity(*dest));
         flags.setFlag(FLAGS::CF, false); // XOR does not affect carry flag
         flags.setFlag(FLAGS::OF, false); // XOR does not affect overflow flag
     }
@@ -315,7 +364,7 @@ namespace CPU {
 
         flags.setFlag(FLAGS::ZF, *dest == 0);
         flags.setFlag(FLAGS::SF, (*dest & 0x8000) != 0);
-        flags.setFlag(FLAGS::PF, __builtin_parity(*dest));
+        flags.setFlag(FLAGS::PF, utils.calculateParity(*dest));
         flags.setFlag(FLAGS::CF, false); // NOT does not affect carry flag
         flags.setFlag(FLAGS::OF, false); // NOT does not affect overflow flag
     }
@@ -332,7 +381,7 @@ namespace CPU {
 
         flags.setFlag(FLAGS::ZF, result == 0);
         flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
-        flags.setFlag(FLAGS::PF, __builtin_parity(result));
+        flags.setFlag(FLAGS::PF, utils.calculateParity(*dest));
         flags.setFlag(FLAGS::CF, (*dest & (1 << (16 - count))) != 0);
         flags.setFlag(FLAGS::OF, ((*dest ^ result) & 0x8000) != 0);
 
@@ -351,7 +400,7 @@ namespace CPU {
 
         flags.setFlag(FLAGS::ZF, result == 0);
         flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
-        flags.setFlag(FLAGS::PF, __builtin_parity(result));
+        flags.setFlag(FLAGS::PF, utils.calculateParity(*dest));
         flags.setFlag(FLAGS::CF, (*dest & (1 << (count - 1))) != 0);
         flags.setFlag(FLAGS::OF, ((*dest ^ result) & 0x8000) != 0);
 
