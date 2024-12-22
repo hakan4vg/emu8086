@@ -82,3 +82,5 @@
 /cmake-build-debug/.cmake/api/v1/query/toolchains-v1
 /build/.cmake/api/v1/reply/toolchains-v1-4632f798d47bde4fedf6.json
 /cmake-build-debug/.cmake/api/v1/reply/toolchains-v1-839082c379ea4ef10a1f.json
+build/.cmake/api/v1/reply/index-2024-12-22T11-57-28-0819.json
+.vscode/settings.json

@@ -24,7 +24,7 @@ namespace CPU {
                 flags &= ~flagMask; //bitwise not, clear the bit
         }
 
-        void getFlag(uint16_t flagMask) const {
+        bool getFlag(uint16_t flagMask) const {
             return (flags & flagMask) != 0;
         }
 
@@ -35,11 +35,11 @@ namespace CPU {
 
     enum FLAGS {
         CF = 1 << 0, //Carry
-        PF = 1 << 2, //Parity
-        AF = 1 << 4, //Auxiliary Carry
+        PF = 1 << 2, //Parity - Bitwise
+        AF = 1 << 4, //Auxillary Carry Indicates a carry/borrow between the lower nibble (4 bits) during BCD (Binary-Coded Decimal) operations.
         ZF = 1 << 6, //Zero
-        SF = 1 << 7, //Sign
-        TF = 1 << 8, //Trap
+        SF = 1 << 7, //Sign - Only necessary when distinguishing between signed and unsigned numbers /TODO
+        TF = 1 << 8, //Trap - Debugging
         IF = 1 << 9, //Interrupt Enable
         DF = 1 << 10, //Direction
         OF = 1 << 11, //Overflow

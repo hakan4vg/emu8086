@@ -27,7 +27,7 @@ namespace CPU {
         uint8_t fetchByte();
         uint16_t fetchWord();
         void decodeAndExecute(uint8_t opcode);
-
+        uint16_t* getRegisterReference(uint8_t reg);
         void handleMOV();
         void handleADD();
         void handleSUB();
@@ -58,5 +58,6 @@ namespace CPU {
     };
 
 }
+
 
 #endif //INSTRUCTIONS_HPP

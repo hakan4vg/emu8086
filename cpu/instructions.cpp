@@ -101,28 +101,322 @@ namespace CPU {
         uint8_t opcode = fetchByte();
         decodeAndExecute(opcode);
     }
-    void Instructions::handleADD() {
-        uint16_t dest = registers.AX.value;
-        uint16_t src = fetchWord();
-        uint32_t result = dest + src;
 
-        registers.AX.value = result;
+    uint16_t* Instructions::getRegisterReference(uint8_t reg) {
+        switch (reg) {
+            case 0: return &registers.AX.value;
+            case 1: return &registers.CX.value;
+            case 2: return &registers.DX.value;
+            case 3: return &registers.BX.value;
+            case 4: return &registers.SP;
+            case 5: return &registers.BP;
+            case 6: return &registers.SI;
+            case 7: return &registers.DI;
+            default: throw std::runtime_error("Invalid register code");
+        }
+    }
+
+
+    void Instructions::handleADD() {
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm); 
+        uint16_t src = fetchWord(); 
+
+        uint32_t result = *dest + src;
+
         flags.setFlag(FLAGS::ZF, result == 0);
-        flags.setFlag(FLAGS::CF, result < dest);
+        flags.setFlag(FLAGS::CF, result < *dest);
+        flags.setFlag(FLAGS::OF, ((*dest ^ src ^ 0x8000) & (*dest ^ result) & 0x8000) != 0);
+        flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
+        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+
+        *dest = result;
     }
 
     void Instructions::handleSUB() {
-        uint16_t dest = registers.AX.value;
-        uint16_t src = fetchWord();
-        uint16_t result = dest - src;
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
 
-        registers.AX.value = result;
-        flags.setFlag()
+        uint16_t* dest = getRegisterReference(rm);
+        uint16_t src = fetchWord();
+
+        uint16_t result = *dest - src;
+
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::CF, *dest < src);
+        flags.setFlag(FLAGS::OF, ((*dest ^ src) & (*dest ^ result) & 0x8000) != 0);
+        flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
+        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+
+        *dest = result;
     }
 
 
+    void Instructions::handleMUL() {
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint16_t src = fetchWord();
+
+        uint32_t result = *dest * src;
+
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::CF, result > 0xFFFF);
+        flags.setFlag(FLAGS::OF, result > 0xFFFF);
+
+        *dest = result;
+    }
+
+    void Instructions::handleDIV(){
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint16_t src = fetchWord();
+
+        if (src == 0) {
+            throw std::runtime_error("Division by zero");
+        }
+
+        uint32_t result = *dest / src;
+
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::CF, result > 0xFFFF);
+        flags.setFlag(FLAGS::OF, result > 0xFFFF);
+
+        *dest = result;
+    }
 
 
+    void Instructions::handleINC() {
+        uint8_t reg = fetchByte() & 0x07;
+        uint16_t* dest = getRegisterReference(reg);
+        uint16_t result = *dest + 1;
+
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+        flags.setFlag(FLAGS::OF, result == 0x8000);
+        flags.setFlag(FLAGS::AF, ((*dest ^ result) & 0x10) != 0);
+
+        *dest = result;
+    }
+
+    void Instructions::handleDEC() {
+        uint8_t reg = fetchByte() & 0x07;
+        uint16_t* dest = getRegisterReference(reg);
+        uint16_t result = *dest - 1;
+
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+        flags.setFlag(FLAGS::OF, result == 0x7FFF);
+        flags.setFlag(FLAGS::AF, ((*dest ^ result) & 0x10) != 0);
+
+        *dest = result;
+    }
+
+
+    void Instructions::handleCMP() {
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint16_t src = fetchWord();
+
+        uint16_t result = *dest - src;
+
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::CF, *dest < src);
+        flags.setFlag(FLAGS::OF, ((*dest ^ src) & (*dest ^ result) & 0x8000) != 0);
+        flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
+        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+    }
+
+    void Instructions::handleINT() //Interrupt
+    {
+        //TODO Implement interrupt handling
+    }
+    void Instructions::handleHLT() //Halt
+    {
+        //TODO Implement halt
+    }
+
+    void Instructions::handleAND() {
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint16_t src = fetchWord();
+
+        *dest &= src;
+
+        flags.setFlag(FLAGS::ZF, *dest == 0);
+        flags.setFlag(FLAGS::SF, (*dest & 0x8000) != 0);
+        flags.setFlag(FLAGS::PF, __builtin_parity(*dest));
+        flags.setFlag(FLAGS::CF, false); // AND does not affect carry flag
+        flags.setFlag(FLAGS::OF, false); // AND does not affect overflow flag
+    }
+
+    void Instructions::handleOR() {
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint16_t src = fetchWord();
+
+        *dest |= src;
+
+        flags.setFlag(FLAGS::ZF, *dest == 0);
+        flags.setFlag(FLAGS::SF, (*dest & 0x8000) != 0);
+        flags.setFlag(FLAGS::PF, __builtin_parity(*dest));
+        flags.setFlag(FLAGS::CF, false); // OR does not affect carry flag
+        flags.setFlag(FLAGS::OF, false); // OR does not affect overflow flag
+    }
+
+    void Instructions::handleXOR() {
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint16_t src = fetchWord();
+
+        *dest ^= src;
+
+        flags.setFlag(FLAGS::ZF, *dest == 0);
+        flags.setFlag(FLAGS::SF, (*dest & 0x8000) != 0);
+        flags.setFlag(FLAGS::PF, __builtin_parity(*dest));
+        flags.setFlag(FLAGS::CF, false); // XOR does not affect carry flag
+        flags.setFlag(FLAGS::OF, false); // XOR does not affect overflow flag
+    }
+
+    void Instructions::handleNOT() {
+        uint8_t reg = fetchByte() & 0x07;
+        uint16_t* dest = getRegisterReference(reg);
+
+        *dest = ~(*dest);
+
+        flags.setFlag(FLAGS::ZF, *dest == 0);
+        flags.setFlag(FLAGS::SF, (*dest & 0x8000) != 0);
+        flags.setFlag(FLAGS::PF, __builtin_parity(*dest));
+        flags.setFlag(FLAGS::CF, false); // NOT does not affect carry flag
+        flags.setFlag(FLAGS::OF, false); // NOT does not affect overflow flag
+    }
+    
+    void Instructions::handleSHL() {
+        uint8_t modrm = fetchByte();
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint8_t count = fetchByte() & 0x1F; // Only lower 5 bits are used for the count
+
+        uint16_t result = *dest << count;
+
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+        flags.setFlag(FLAGS::PF, __builtin_parity(result));
+        flags.setFlag(FLAGS::CF, (*dest & (1 << (16 - count))) != 0);
+        flags.setFlag(FLAGS::OF, ((*dest ^ result) & 0x8000) != 0);
+
+        *dest = result;
+    }
+
+    void Instructions::handleSHR() {
+        uint8_t modrm = fetchByte();
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint8_t count = fetchByte() & 0x1F; // Only lower 5 bits are used for the count
+
+        uint16_t result = *dest >> count;
+
+        flags.setFlag(FLAGS::ZF, result == 0);
+        flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
+        flags.setFlag(FLAGS::PF, __builtin_parity(result));
+        flags.setFlag(FLAGS::CF, (*dest & (1 << (count - 1))) != 0);
+        flags.setFlag(FLAGS::OF, ((*dest ^ result) & 0x8000) != 0);
+
+        *dest = result;
+    }
+    
+
+    void Instructions::handleJE() {
+        int16_t offset = static_cast<int16_t>(fetchWord());
+        if (flags.getFlag(FLAGS::ZF)) {
+            registers.IP += offset;
+        }
+    }
+
+    void Instructions::handleJNE() {
+        int16_t offset = static_cast<int16_t>(fetchWord());
+        if (!flags.getFlag(FLAGS::ZF)) {
+            registers.IP += offset;
+        }
+    }
+
+    void Instructions::handleJG() {
+        int16_t offset = static_cast<int16_t>(fetchWord());
+        if (!flags.getFlag(FLAGS::ZF) && (flags.getFlag(FLAGS::SF) == flags.getFlag(FLAGS::OF))) {
+            registers.IP += offset;
+        }
+    }
+
+    void Instructions::handleJGE() {
+        int16_t offset = static_cast<int16_t>(fetchWord());
+        if (flags.getFlag(FLAGS::SF) == flags.getFlag(FLAGS::OF)) {
+            registers.IP += offset;
+        }
+    }
+
+    void Instructions::handleJL() {
+        int16_t offset = static_cast<int16_t>(fetchWord());
+        if (flags.getFlag(FLAGS::SF) != flags.getFlag(FLAGS::OF)) {
+            registers.IP += offset;
+        }
+    }
+
+    void Instructions::handleJLE() {
+        int16_t offset = static_cast<int16_t>(fetchWord());
+        if (flags.getFlag(FLAGS::ZF) || (flags.getFlag(FLAGS::SF) != flags.getFlag(FLAGS::OF))) {
+            registers.IP += offset;
+        }
+    }
+
+    void Instructions::handleJMP() {
+        int16_t offset = static_cast<int16_t>(fetchWord());
+        registers.IP += offset;
+    }
+
+    void Instructions::handleMOV() {
+        uint8_t modrm = fetchByte();
+        uint8_t mod = (modrm >> 6) & 0x03;
+        uint8_t reg = (modrm >> 3) & 0x07;
+        uint8_t rm = modrm & 0x07;
+
+        uint16_t* dest = getRegisterReference(rm);
+        uint16_t src = fetchWord();
+
+        *dest = src;
+    }
 
 
 
