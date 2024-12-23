@@ -17,6 +17,7 @@ namespace CPU {
 
         uint8_t readByte(uint32_t address) const;
         uint16_t readWord(uint32_t address) const;
+        uint16_t* getPointer(uint16_t address);
 
         void writeByte(uint32_t addrses, uint8_t value);
         void writeWord(uint32_t address, uint16_t value);

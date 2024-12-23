@@ -117,7 +117,38 @@ namespace CPU {
         flags.setFlag(FLAGS::AF, ((dest ^ src ^ result) & 0x10) != 0);
         flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
     }
+    uint16_t* Instructions::getMemoryReference(uint8_t mod, uint8_t rm) {
+        uint16_t base = 0;
+        uint16_t offset = 0;
 
+        switch (rm) {
+            case 0b000: base = registers.BX.value + registers.SI; break;
+            case 0b001: base = registers.BX.value + registers.DI; break;
+            case 0b010: base = registers.BP + registers.SI; break;
+            case 0b011: base = registers.BP + registers.DI; break;
+            case 0b100: base = registers.SI; break;
+            case 0b101: base = registers.DI; break;
+            case 0b110:
+                if (mod == 0b00) {
+                    offset = fetchWord(); // Direct address mode
+                } else {
+                    base = registers.BP;
+                }
+                break;
+            case 0b111: base = registers.BX.value; break;
+        }
+
+        if (mod == 0b01) offset += static_cast<int8_t>(fetchByte()); // 8-bit displacement
+        if (mod == 0b10) offset += fetchWord(); // 16-bit displacement
+
+        uint32_t physicalAddress = memory.calculatePhysicalAddress(base, offset);
+        return memory.getPointer(physicalAddress);
+}
+    
+    void Instructions::executeNext() {
+        uint8_t opcode = fetchByte();
+        decodeAndExecute(opcode);
+    }
     void Instructions::handleF6()
     {
         uint8_t modrm = fetchByte();
@@ -130,10 +161,6 @@ namespace CPU {
         case 0x02: handleNOT(); break;
         default: throw std::runtime_error("Unknown F6 opcode: " + std::to_string(subOpcode));
         }
-    }
-    void Instructions::executeNext() {
-        uint8_t opcode = fetchByte();
-        decodeAndExecute(opcode);
     }
 
     uint16_t* Instructions::getRegisterReference(uint8_t reg) {
@@ -150,49 +177,50 @@ namespace CPU {
         }
     }
 
-
     void Instructions::handleADD() {
         uint8_t modrm = fetchByte();
         uint8_t mod = (modrm >> 6) & 0x03;
         uint8_t reg = (modrm >> 3) & 0x07;
         uint8_t rm = modrm & 0x07;
 
-        uint16_t* dest = getRegisterReference(rm); 
-        uint16_t src = fetchWord(); 
+        uint16_t* dest;
+        uint16_t src;
+
+        if (mod == 0b11) { 
+            // Register to Register
+            dest = getRegisterReference(rm);
+            src = *getRegisterReference(reg);
+        } else { 
+            // Memory involved
+            dest = getMemoryReference(mod, rm);
+            src = *getRegisterReference(reg);
+        }
 
         uint32_t result = *dest + src;
-
         setArithmeticFlags(result, *dest, src);
-
-        // setArithmeticFlags(result, *dest, src);
-        // flags.setFlag(FLAGS::ZF, result == 0);
-        // flags.setFlag(FLAGS::CF, result < *dest);
-        // flags.setFlag(FLAGS::OF, ((*dest ^ src ^ 0x8000) & (*dest ^ result) & 0x8000) != 0);
-        // flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
-        // flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
-
         *dest = result;
     }
-
     void Instructions::handleSUB() {
         uint8_t modrm = fetchByte();
         uint8_t mod = (modrm >> 6) & 0x03;
         uint8_t reg = (modrm >> 3) & 0x07;
         uint8_t rm = modrm & 0x07;
 
-        uint16_t* dest = getRegisterReference(rm);
-        uint16_t src = fetchWord();
+        uint16_t* dest;
+        uint16_t src;
 
-        uint16_t result = *dest - src;
+        if (mod == 0b11) { 
+            // Register to Register
+            dest = getRegisterReference(rm);
+            src = *getRegisterReference(reg);
+        } else { 
+            // Memory involved
+            dest = getMemoryReference(mod, rm);
+            src = *getRegisterReference(reg);
+        }
 
+        uint32_t result = *dest - src;
         setArithmeticFlags(result, *dest, src);
-
-        // flags.setFlag(FLAGS::ZF, result == 0);
-        // flags.setFlag(FLAGS::CF, *dest < src);
-        // flags.setFlag(FLAGS::OF, ((*dest ^ src) & (*dest ^ result) & 0x8000) != 0);
-        // flags.setFlag(FLAGS::AF, ((*dest ^ src ^ result) & 0x10) != 0);
-        // flags.setFlag(FLAGS::SF, (result & 0x8000) != 0);
-
         *dest = result;
     }
 
@@ -461,12 +489,45 @@ namespace CPU {
         uint8_t reg = (modrm >> 3) & 0x07;
         uint8_t rm = modrm & 0x07;
 
-        uint16_t* dest = getRegisterReference(rm);
-        uint16_t src = fetchWord();
+        uint16_t* dest;
+        uint16_t src;
+
+        if (mod == 0b11) { 
+            // Register to Register
+            dest = getRegisterReference(rm);
+            src = *getRegisterReference(reg);
+        } else { 
+            // Memory involved
+            dest = getMemoryReference(mod, rm);
+            src = *getRegisterReference(reg);
+        }
 
         *dest = src;
     }
 
+    void Instructions::handlePUSH() {
+        uint8_t reg = fetchByte() & 0x07;
+        uint16_t* src = getRegisterReference(reg);
 
+        registers.SP -= 2;
+        memory.writeWord(memory.calculatePhysicalAddress(registers.SS, registers.SP), *src);
+    }
+    void Instructions::handlePOP() {
+        uint8_t reg = fetchByte() & 0x07;
+        uint16_t* dest = getRegisterReference(reg);
+
+        *dest = memory.readWord(memory.calculatePhysicalAddress(registers.SS, registers.SP));
+        registers.SP += 2;
+    }
+    void Instructions::handleCALL() {
+        int16_t offset = static_cast<int16_t>(fetchWord());
+        registers.SP -= 2;
+        memory.writeWord(memory.calculatePhysicalAddress(registers.SS, registers.SP), registers.IP);
+        registers.IP += offset;
+    }
+    void Instructions::handleRET() {
+        registers.IP = memory.readWord(memory.calculatePhysicalAddress(registers.SS, registers.SP));
+        registers.SP += 2;
+    }
 
 }

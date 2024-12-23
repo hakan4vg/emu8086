@@ -55,6 +55,12 @@ namespace CPU {
         std::cout << std::dec << std::endl;
     }
 
+    uint16_t* Memory::getPointer(uint16_t address) {
+       if (address + 1 >= MEMORY_SIZE) {
+           throw std::out_of_range("Memory read out of range");
+       }
+       return reinterpret_cast<uint16_t*>(&memory[address]);
+    }
 
 
 }

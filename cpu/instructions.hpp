@@ -24,6 +24,7 @@ namespace CPU {
         using InstructionHandler = std::function<void()>; //Function pointer type
         std::unordered_map<uint8_t, InstructionHandler> opcodeTable; //Opcode -> Handler
 
+        uint16_t* getMemoryReference(uint8_t mod, uint8_t rm);
         uint8_t fetchByte();
         uint16_t fetchWord();
         void decodeAndExecute(uint8_t opcode);
@@ -54,6 +55,11 @@ namespace CPU {
         void handleNOT();
         void handleSHL();
         void handleSHR();
+        void handlePUSH();
+        void handlePOP();
+        void handleCALL();
+        void handleRET();
+        
     public:
         Instructions(Memory &mem, Registers &reg, Flags &flg);
 
