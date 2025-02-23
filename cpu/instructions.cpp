@@ -102,7 +102,7 @@ namespace CPU {
     }
 
      /**
-     * Handles arithmetic ADD instruction
+     * Handles arithmetic instructions
      * Performs dest = dest + src and sets appropriate flags:
      * - ZF: Set if result is zero
      * - CF: Set if unsigned overflow occurred
