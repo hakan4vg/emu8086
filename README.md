@@ -1,6 +1,7 @@
 # EMU8086 - 8086 Processor Emulator
 
-An emulator for the Intel 8086 microprocessor with an integrated assembler and disassembler.
+An emulator for the Intel 8086 microprocessor with an integrated assembler and disassembler, 
+Disclaimer: I took a lot of help from Claude 3.7 Sonnet and ChatGPT o4-mini, I would love to not use any, but since the project grew way out of my reach in some aspects, some changes were made using LLMs.
 
 ## Features
 
@@ -49,7 +50,7 @@ emu8086/
 - ⏳ **Performance Tracking**: Cycle counting, timing emulation
 - ⏳ **Debugger**: Breakpoints, memory inspection, step execution
 
-For more details about future plans, see the [roadmap](roadmap.md).
+For more details about future plans, see the [roadmap](roadmap.md). (TODO)
 
 ## Building
 
@@ -178,7 +179,7 @@ INT 10h          ; Call video BIOS interrupt
 ```
 
 ## Examples
-
+### IMPORTANT: Most of these examples are written by Claude 3.7 Sonnet Thinking
 Sample assembly programs are provided in the `examples` directory:
 
 - `simple.asm`: Displays "Hello!" using INT 10h
