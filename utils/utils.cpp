@@ -4,7 +4,7 @@
 
 #include "utils.h"
 
-bool calculateParity(uint16_t value) {
+bool cpu::UTILS::calculateParity(uint16_t value) {
     value ^= value >> 8;
     value ^= value >> 4;
     value ^= value >> 2;

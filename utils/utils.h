@@ -11,9 +11,6 @@ namespace cpu
     class UTILS {
        public: bool calculateParity(uint16_t value);
     };
-
 }
-
-
 
 #endif //UTILS_H

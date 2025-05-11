@@ -1,4 +1,6 @@
 /cmake-build-debug/._.cmake
+/examples/
+/build
 /._.idea
 /cmake-build-debug/.cmake/._api
 /cmake-build-debug/._build.ninja
@@ -92,3 +94,19 @@ build/.cmake/api/v1/reply/target-emu8086-Debug-723bce68da94a0b8bbec.json
 build/.cmake/api/v1/reply/codemodel-v2-ecf51c3af46ddde5c454.json
 build/.cmake/api/v1/reply/index-2024-12-23T19-38-01-0776.json
 roadmap.md
+build/.cmake/api/v1/reply/cache-v2-82065ee8f5102c5065de.json
+build/.cmake/api/v1/reply/cmakeFiles-v1-fe622a14acf1ce86a437.json
+build/.cmake/api/v1/reply/codemodel-v2-f01f4fede8393ac46ca5.json
+build/.cmake/api/v1/reply/index-2025-02-23T16-47-06-0937.json
+build/.cmake/api/v1/reply/target-emu8086-Debug-2c70441f3a844e057bbd.json
+build/CMakeFiles/3.31.4/CMakeCCompiler.cmake
+build/CMakeFiles/3.31.4/CMakeCXXCompiler.cmake
+build/CMakeFiles/3.31.4/CMakeDetermineCompilerABI_C.bin
+build/CMakeFiles/3.31.4/CMakeDetermineCompilerABI_CXX.bin
+build/CMakeFiles/3.31.4/CMakeRCCompiler.cmake
+build/CMakeFiles/3.31.4/CMakeSystem.cmake
+build/CMakeFiles/3.31.4/CompilerIdC/a.exe
+build/CMakeFiles/3.31.4/CompilerIdC/CMakeCCompilerId.c
+build/CMakeFiles/3.31.4/CompilerIdCXX/a.exe
+build/CMakeFiles/3.31.4/CompilerIdCXX/CMakeCXXCompilerId.cpp
+.vscode/c_cpp_properties.json

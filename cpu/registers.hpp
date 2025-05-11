@@ -2,6 +2,7 @@
 #define REGISTERS_HPP
 
 #include <cstdint> // For fixed-width integer types
+#include "flags.hpp" // Include FLAGS structure
 
 namespace CPU {
 

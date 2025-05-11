@@ -16,7 +16,7 @@ namespace CPU {
         if (address + 1 >= MEMORY_SIZE) {
             throw std::out_of_range("Memory read out of range");
         }
-        return memory[address] | (memory[address+1] << 0);
+        return memory[address] | (memory[address+1] << 8);
     }
 
     void Memory::writeByte(uint32_t address, uint8_t value) {
@@ -61,6 +61,4 @@ namespace CPU {
        }
        return reinterpret_cast<uint16_t*>(&memory[address]);
     }
-
-
 }
